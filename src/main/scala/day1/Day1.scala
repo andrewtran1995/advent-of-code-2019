@@ -4,7 +4,7 @@ import scala.io.Source
 
 object Day1 {
   def main(args: Array[String]): Unit = {
-    val filePath = "src/main/resources/day1/input.txt"
+    val filePath = "src/main/resources/day1/input"
     val bufferedSource = Source.fromFile(filePath)
 //    val totalFuelRequired = bufferedSource.getLines().map(str => fuelRequired(str.toInt)).sum
 //    println(s"The total amount of fuel required is $totalFuelRequired")
