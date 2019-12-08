@@ -11,6 +11,7 @@ object Day3 {
     bufferedSource.close
     val (wirepaths1, wirepaths2) = (path1.map(WirePath(_)), path2.map(WirePath(_)))
     println("shortest distance is %s" format findShortestDistance(wirepaths1, wirepaths2))
+    println("fewest steps is %s" format findFewestSteps(wirepaths1, wirepaths2))
   }
 
   def findShortestDistance(paths1: List[WirePath], paths2: List[WirePath]): Int = {
@@ -19,6 +20,18 @@ object Day3 {
       line2 <- WirePath.pathsToLines(paths2)
     ) yield (line1, line2)
     possiblePairs.flatMap{case (l1, l2) => l1.intersects(l2)}.filter(_ != Point.start).map(Line(Point.start, _).manhattanDistance).min
+  }
+
+  def findFewestSteps(paths1: List[WirePath], paths2: List[WirePath]): Int = {
+    val possiblePairs = for (
+      (line1, i) <- WirePath.pathsToLines(paths1).reverse.zipWithIndex;
+      (line2, j) <- WirePath.pathsToLines(paths2).reverse.zipWithIndex
+    ) yield (line1, i, line2, j)
+    possiblePairs.foldLeft(List(): List[Int]) {
+      case (distances, (l1: Line, i: Int, l2: Line, j: Int)) =>
+      if (l1.intersects(l2).exists(_ != Point.start)) (i + j) :: distances
+      else distances
+    }.min
   }
 
   case class Point(x: Int, y: Int) {
@@ -36,9 +49,9 @@ object Day3 {
     def intersects(other: Line): List[Point] = {
       isCollinearBy(other) map {
         case 'X' =>
-          getRangeOverlap((p1.x, p2.x), (other.p1.x, other.p2.x)) map (range => range._1 to range._2 map (Point(_, p1.y))) getOrElse List() toList
+          getRangeOverlap((p1.x, p2.x), (other.p1.x, other.p2.x)) map {case (s, e) => s to e map (Point(_, p1.y))} getOrElse List() toList
         case 'Y' =>
-          getRangeOverlap((p1.y, p2.y), (other.p1.y, other.p2.y)) map (range => range._1 to range._2 map (Point(p1.x, _))) getOrElse List() toList
+          getRangeOverlap((p1.y, p2.y), (other.p1.y, other.p2.y)) map {case (s, e) => s to e map (Point(p1.x, _))} getOrElse List() toList
       } getOrElse {
         if (isParallel(other)) {
           List()
