@@ -1,38 +1,67 @@
 package day3
 
+import scala.io.Source
+
 object Day3 {
-  case class Point(x: Int, y: Int)
+  final val filePath = "src/main/resources/day3/input"
+  def main(args: Array[String]): Unit = {
+    val bufferedSource = Source.fromFile(filePath)
+    val (path1, path2) = bufferedSource.getLines().map(_.split(',')) match {
+      case List(x: List[String], y: List[String]) => (x, y)
+    }
+    bufferedSource.close
+    val (wirepaths1, wirepaths2) = (path1.map(WirePath(_)), path2.map(WirePath(_)))
+    println("shortest distance is %s" format findShortestDistance(wirepaths1, wirepaths2))
+  }
+
+  def findShortestDistance(paths1: List[WirePath], paths2: List[WirePath]): Int = {
+    paths1.foldLeft(List()) { (lines: List[Line], w: WirePath) =>
+      if (lines.isEmpty) List(Point.start, Point.start.withWirePath(w))
+      else lines :+ Line(lines.last.p2, lines.last.p2.withWirePath(w))
+    }
+    42
+  }
+
+  case class Point(x: Int, y: Int) {
+    def withWirePath(w: WirePath): Point = w.direction match {
+      case Direction.U => Point(x + w.steps, y)
+      case Direction.D => Point(x - w.steps, y)
+      case Direction.L => Point(x, y - w.steps)
+      case Direction.R => Point(x, y + w.steps)
+    }
+  }
+  object Point {
+    def start: Point = Point(1,1)
+  }
   case class Line(p1: Point, p2: Point) {
     def intersects(other: Line): List[Point] = {
-      this.isCollinearBy(other) match {
+      isCollinearBy(other) map {
         case 'X' =>
-          getRangeOverlap((p1.x, p2.x), (other.p1.x, other.p2.x)) match {
-            case Some((start, end)) => (start to end).map(Point(_, p1.y)).toList
-            case None => List()
-          }
+          getRangeOverlap((p1.x, p2.x), (other.p1.x, other.p2.x)) map (range => range._1 to range._2 map (Point(_, p1.y))) getOrElse List() toList
         case 'Y' =>
-          getRangeOverlap((p1.y, p2.y), (other.p1.y, other.p2.y)) match {
-            case Some((start, end)) => (start to end).map(Point(p1.x, _)).toList
-            case None => List()
-          }
-        case None =>
-          if (this.isParallel(other)) {
-            List()
-          } else if (isVertical && (p1.x to p2.x contains other.p1.x) && (other.p1.y to other.p2.y contains p1.y)) {
-            List(Point(p1.x, other.p1.y))
-          } else if ((p1.y to p2.y contains other.p1.y) && (other.p1.x to other.p2.x contains p1.x)) {
-            List(Point(other.p1.x, p1.y))
-          } else {
-            List()
-          }
+          getRangeOverlap((p1.y, p2.y), (other.p1.y, other.p2.y)) map (range => range._1 to range._2 map (Point(p1.x, _))) getOrElse List() toList
+      } getOrElse {
+        if (isParallel(other)) {
+          List()
+        } else if (isHorizontal && (xRange contains other.p1.x) && (other.yRange contains p1.y)) {
+          List(Point(other.p1.x, p1.y))
+        } else if (isVertical && (yRange contains other.p1.y) && (other.xRange contains p1.x)) {
+          List(Point(p1.x, other.p1.y))
+        } else {
+          List()
+        }
       }
     }
 
     def isVertical: Boolean = p1.x == p2.x
     def isHorizontal: Boolean = p1.y == p2.y
+
+    def xRange: Range = if (p1.x <= p2.x) p1.x to p2.x else p2.x to p1.x
+    def yRange: Range = if (p1.y <= p2.y) p1.y to p2.y else p2.y to p1.y
+
     def isParallel(other: Line): Boolean = isVertical && other.isVertical || isHorizontal && other.isHorizontal
 
-    def isCollinearBy(other: Line): Option[Character] = {
+    def isCollinearBy(other: Line): Option[Char] = {
       if (this.isParallel(other)) {
         if (isVertical && p1.x == other.p1.x) Some('Y')
         else if (isHorizontal && p1.y == other.p1.y) Some('X')
@@ -49,10 +78,16 @@ object Day3 {
       else
         None
     }
+
+    def manhattanDistance: Int = xRange.sum + yRange.sum
   }
-
-  def main(args: Array[String]): Unit = {
-
+  case class WirePath(direction: Direction.Value, steps: Int)
+  object WirePath {
+    def apply(s: String): WirePath = WirePath(Direction.withName(s.take(0)), s.tail.toInt)
   }
-
+  class Direction
+  object Direction extends Enumeration {
+    type Direction = Value
+    val U, D, L, R = Value
+  }
 }
