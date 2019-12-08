@@ -1,13 +1,12 @@
 package day3
-
 import scala.io.Source
 
 object Day3 {
   final val filePath = "src/main/resources/day3/input"
   def main(args: Array[String]): Unit = {
     val bufferedSource = Source.fromFile(filePath)
-    val (path1, path2) = bufferedSource.getLines().map(_.split(',')) match {
-      case List(x: List[String], y: List[String]) => (x, y)
+    val (path1, path2) = bufferedSource.getLines().map(_.split(',')).toList match {
+      case List(x: Array[String], y: Array[String]) => (x.toList, y.toList)
     }
     bufferedSource.close
     val (wirepaths1, wirepaths2) = (path1.map(WirePath(_)), path2.map(WirePath(_)))
@@ -15,11 +14,11 @@ object Day3 {
   }
 
   def findShortestDistance(paths1: List[WirePath], paths2: List[WirePath]): Int = {
-    paths1.foldLeft(List()) { (lines: List[Line], w: WirePath) =>
-      if (lines.isEmpty) List(Point.start, Point.start.withWirePath(w))
-      else lines :+ Line(lines.last.p2, lines.last.p2.withWirePath(w))
-    }
-    42
+    val possiblePairs = for (
+      line1 <- WirePath.pathsToLines(paths1);
+      line2 <- WirePath.pathsToLines(paths2)
+    ) yield (line1, line2)
+    possiblePairs.flatMap{case (l1, l2) => l1.intersects(l2)}.filter(_ != Point.start).map(Line(Point.start, _).manhattanDistance).min
   }
 
   case class Point(x: Int, y: Int) {
@@ -79,11 +78,20 @@ object Day3 {
         None
     }
 
-    def manhattanDistance: Int = xRange.sum + yRange.sum
+    def manhattanDistance: Int = math.abs(p1.x - p2.x) + math.abs(p1.y - p2.y)
   }
   case class WirePath(direction: Direction.Value, steps: Int)
   object WirePath {
-    def apply(s: String): WirePath = WirePath(Direction.withName(s.take(0)), s.tail.toInt)
+    def apply(s: String): WirePath = WirePath(Direction.withName(s.head.toString), s.tail.toInt)
+
+    // Fold a list of wirepaths to a list of lines (starting at Point.start).
+    // Note that the returned list is in "reverse" order, but order for lines should not matter functionally.
+    def pathsToLines(wirepaths: List[WirePath]): List[Line] = {
+      wirepaths.foldLeft(List(): List[Line]) { (lines: List[Line], w: WirePath) =>
+        if (lines.isEmpty) List(Line(Point.start, Point.start.withWirePath(w)))
+        else Line(lines.head.p2, lines.head.p2.withWirePath(w)) :: lines
+      }
+    }
   }
   class Direction
   object Direction extends Enumeration {
