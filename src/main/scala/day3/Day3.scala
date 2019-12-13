@@ -23,20 +23,20 @@ object Day3 {
   }
 
   def findFewestSteps(paths1: List[WirePath], paths2: List[WirePath]): Int = {
-    val lines1 = WirePath.pathsToLines(paths1)
-    val lines2 = WirePath.pathsToLines(paths2)
+    val lines1 = WirePath.pathsToLines(paths1).reverse
+    val lines2 = WirePath.pathsToLines(paths2).reverse
     val possiblePairs = for (
-      (line1, i) <- lines1.reverse.zipWithIndex;
-      (line2, j) <- lines2.reverse.zipWithIndex
+      (line1, i) <- lines1.zipWithIndex;
+      (line2, j) <- lines2.zipWithIndex
     ) yield (line1, i, line2, j)
-    val (line1: Line, _, line2: Line, _) = possiblePairs.filter{ case (l1, _, l2, _) => l1.intersects(l2).exists(_ != Point.start) }.minBy{ case (_, i, _, j) => i + j }
+    val (line1: Line, i, line2: Line, j) = possiblePairs.filter{ case (l1, _, l2, _) => l1.intersects(l2).exists(_ != Point.start) }.minBy{ case (_, i, _, j) => i + j }
     line1.intersects(line2).map(pt => stepsUntilPoint(lines1, pt) + stepsUntilPoint(lines2, pt)).min
   }
 
   def stepsUntilPoint(lines: List[Line], point: Point): Int = {
     lines.foldLeft((0, false)){ case ((steps: Int, done: Boolean), line: Line) =>
       if (done) (steps, done)
-      else if (line.intersects(Line(point, point)).nonEmpty) {
+      else if (line.intersects(point)) {
         (steps + line.stepsToPoint(point), true)
       } else {
         (steps + line.manhattanDistance, false)
@@ -74,6 +74,7 @@ object Day3 {
         }
       }
     }
+    def intersects(point: Point): Boolean = this.intersects(Line(point, point)).nonEmpty
 
     def isVertical: Boolean = p1.x == p2.x
     def isHorizontal: Boolean = p1.y == p2.y
