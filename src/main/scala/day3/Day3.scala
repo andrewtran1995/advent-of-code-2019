@@ -23,15 +23,25 @@ object Day3 {
   }
 
   def findFewestSteps(paths1: List[WirePath], paths2: List[WirePath]): Int = {
+    val lines1 = WirePath.pathsToLines(paths1)
+    val lines2 = WirePath.pathsToLines(paths2)
     val possiblePairs = for (
-      (line1, i) <- WirePath.pathsToLines(paths1).reverse.zipWithIndex;
-      (line2, j) <- WirePath.pathsToLines(paths2).reverse.zipWithIndex
+      (line1, i) <- lines1.reverse.zipWithIndex;
+      (line2, j) <- lines2.reverse.zipWithIndex
     ) yield (line1, i, line2, j)
-    possiblePairs.foldLeft(List(): List[Int]) {
-      case (distances, (l1: Line, i: Int, l2: Line, j: Int)) =>
-      if (l1.intersects(l2).exists(_ != Point.start)) (i + j) :: distances
-      else distances
-    }.min
+    val (line1: Line, _, line2: Line, _) = possiblePairs.filter{ case (l1, _, l2, _) => l1.intersects(l2).exists(_ != Point.start) }.minBy{ case (_, i, _, j) => i + j }
+    line1.intersects(line2).map(pt => stepsUntilPoint(lines1, pt) + stepsUntilPoint(lines2, pt)).min
+  }
+
+  def stepsUntilPoint(lines: List[Line], point: Point): Int = {
+    lines.foldLeft((0, false)){ case ((steps: Int, done: Boolean), line: Line) =>
+      if (done) (steps, done)
+      else if (line.intersects(Line(point, point)).nonEmpty) {
+        (steps + line.stepsToPoint(point), true)
+      } else {
+        (steps + line.manhattanDistance, false)
+      }
+    }._1
   }
 
   case class Point(x: Int, y: Int) {
@@ -92,6 +102,8 @@ object Day3 {
     }
 
     def manhattanDistance: Int = math.abs(p1.x - p2.x) + math.abs(p1.y - p2.y)
+
+    def stepsToPoint(point: Point): Int = math.abs(point.x - p1.x) + math.abs(point.y - p1.y)
   }
   case class WirePath(direction: Direction.Value, steps: Int)
   object WirePath {
